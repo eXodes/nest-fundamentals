@@ -15,9 +15,7 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @Controller('shops')
 export class ShopsController {
-  constructor(private readonly shopsService: ShopsService) {
-    console.log('ShopsController created');
-  }
+  constructor(private readonly shopsService: ShopsService) {}
 
   @Get()
   findAll(@Query() paginationQuery: PaginationQueryDto) {
