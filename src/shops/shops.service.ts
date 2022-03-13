@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Scope } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Connection, Repository } from 'typeorm';
 import { Shop } from './entities/shop.entity';
@@ -7,8 +7,9 @@ import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { Event } from '../events/entities/event.entity';
+import { SHOP_CATEGORIES } from './shops.constants';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class ShopsService {
   constructor(
     @InjectRepository(Shop)
@@ -16,7 +17,11 @@ export class ShopsService {
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     private readonly connection: Connection,
-  ) {}
+    @Inject(SHOP_CATEGORIES) shopCategories: string,
+  ) {
+    console.log('Shop service instantiated');
+    console.log(shopCategories);
+  }
 
   private async preloadCategoryByName(name: string): Promise<Category> {
     const category = await this.categoryRepository.findOne({
