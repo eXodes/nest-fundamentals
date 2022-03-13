@@ -1,24 +1,77 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Connection, Repository } from 'typeorm';
 import { Shop } from './entities/shop.entity';
+import { Category } from './entities/category.entity';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { Event } from '../events/entities/event.entity';
 
 @Injectable()
 export class ShopsService {
-  private shops: Shop[] = [
-    {
-      id: 1,
-      name: 'Tiny Venture',
-      email: 'venture@example.com',
-    },
-  ];
+  constructor(
+    @InjectRepository(Shop)
+    private readonly shopRepository: Repository<Shop>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
+    private readonly connection: Connection,
+  ) {}
 
-  findAll(): Shop[] {
-    return this.shops;
+  private async preloadCategoryByName(name: string): Promise<Category> {
+    const category = await this.categoryRepository.findOne({
+      where: { name: name },
+    });
+
+    if (category) {
+      return category;
+    }
+
+    return this.categoryRepository.create({ name });
   }
 
-  findOne(id: number) {
-    const shop = this.shops.find((shop) => shop.id === id);
+  async recommendShops(shop: Shop) {
+    const queryRunner = this.connection.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      shop.recommendations++;
+
+      const recommendEvent = new Event();
+      recommendEvent.name = 'recommend_shop';
+      recommendEvent.type = 'shop';
+      recommendEvent.payload = {
+        shopId: shop.id,
+      };
+
+      await queryRunner.manager.save(shop);
+      await queryRunner.manager.save(recommendEvent);
+
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async findAll(paginationQuery: PaginationQueryDto): Promise<Shop[]> {
+    const { limit, offset } = paginationQuery;
+
+    return this.shopRepository.find({
+      relations: ['categories'],
+      skip: offset,
+      take: limit,
+    });
+  }
+
+  async findOne(id: number): Promise<Shop> {
+    const shop = await this.shopRepository.findOne(id, {
+      relations: ['categories'],
+    });
 
     if (!shop) {
       throw new NotFoundException(`Shop #${id} not found`);
@@ -27,39 +80,43 @@ export class ShopsService {
     return shop;
   }
 
-  create(createShopDto: CreateShopDto) {
-    const shop = {
-      id: this.shops.length + 1,
-      ...createShopDto,
-    };
+  async create(createShopDto: CreateShopDto) {
+    const categories = await Promise.all(
+      createShopDto.categories.map(async (name) =>
+        this.preloadCategoryByName(name),
+      ),
+    );
 
-    this.shops.push(shop);
+    const shop = this.shopRepository.create({ ...createShopDto, categories });
 
-    return shop;
+    return this.shopRepository.save(shop);
   }
 
-  update(id: number, updateShopDto: UpdateShopDto) {
-    let current = this.findOne(id);
+  async update(id: number, updateShopDto: UpdateShopDto) {
+    const categories =
+      updateShopDto.categories &&
+      (await Promise.all(
+        updateShopDto.categories.map(async (name) =>
+          this.preloadCategoryByName(name),
+        ),
+      ));
 
-    if (current) {
-      current = {
-        ...current,
-        ...updateShopDto,
-      };
+    const shop = await this.shopRepository.preload({
+      id,
+      ...updateShopDto,
+      categories,
+    });
 
-      this.shops = this.shops.map((shop) => (shop.id === id ? current : shop));
+    if (!shop) {
+      throw new NotFoundException(`Shop #${id} not found`);
     }
 
-    return current;
+    return this.shopRepository.save(shop);
   }
 
-  remove(id: number) {
-    const shop = this.findOne(id);
+  async remove(id: number) {
+    const shop = await this.findOne(id);
 
-    if (shop) {
-      this.shops = this.shops.filter((s) => s.id !== id);
-    }
-
-    return shop;
+    return this.shopRepository.remove(shop);
   }
 }

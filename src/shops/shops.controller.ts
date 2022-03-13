@@ -6,18 +6,20 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ShopsService } from './shops.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @Controller('shops')
 export class ShopsController {
   constructor(private readonly shopsService: ShopsService) {}
 
   @Get()
-  findAll() {
-    return this.shopsService.findAll();
+  findAll(@Query() paginationQuery: PaginationQueryDto) {
+    return this.shopsService.findAll(paginationQuery);
   }
 
   @Get(':id')

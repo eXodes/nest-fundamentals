@@ -1,0 +1,26 @@
+version: '3.7'
+
+services:
+  database:
+    container_name: database
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: passwd
+      POSTGRES_DB: nest-app
+    volumes:
+      - nest-db:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - nest-net
+
+networks:
+  nest-net:
+    name: nest-network
+    driver: bridge
+
+volumes:
+  nest-db:
+    name: nest-database
