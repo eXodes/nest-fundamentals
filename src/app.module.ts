@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ShopRatingModule } from './shop-rating/shop-rating.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
+import { CommonModule } from './common/common.module';
 import * as Joi from '@hapi/joi';
 import appConfig from './config/app.config';
 
@@ -38,6 +39,7 @@ const production = process.env.NODE_ENV === 'production';
     ShopsModule,
     ShopRatingModule,
     DatabaseModule,
+    CommonModule,
   ],
   controllers: [AppController],
   providers: [AppService],
