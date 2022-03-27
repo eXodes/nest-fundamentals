@@ -22,7 +22,6 @@ export class ShopsService {
     private readonly shopsConfiguration: ConfigType<typeof shopsConfig>,
   ) {
     const currency = this.shopsConfiguration.currency;
-    console.log('[CURRENCY]:', currency);
   }
 
   private async preloadCategoryByName(name: string): Promise<Category> {

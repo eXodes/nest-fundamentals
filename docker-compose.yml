@@ -5,14 +5,27 @@ services:
     container_name: database
     image: postgres:latest
     ports:
-      - "5432:5432"
+      - "${DATABASE_PORT}:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: passwd
-      POSTGRES_DB: nest-app
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
     volumes:
       - nest-db:/var/lib/postgresql/data
     restart: always
+    networks:
+      - nest-net
+  test-database:
+    container_name: e2e-database
+    image: postgres:latest
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: test-user
+      POSTGRES_PASSWORD: test-password
+      POSTGRES_DB: nest-testing
+    volumes:
+      - test-db:/var/lib/postgresql/data
     networks:
       - nest-net
 
@@ -24,3 +37,5 @@ networks:
 volumes:
   nest-db:
     name: nest-database
+  test-db:
+    name: nest-test-database
